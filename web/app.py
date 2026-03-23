@@ -154,6 +154,10 @@ async def api_optimize(req: OptimizeRequest):
     mix_arr = np.asarray(result["mix"], dtype=float)
     pred_arr = np.asarray(result["predicted_spectrum"], dtype=float)
 
+    # Normalize fractions so they sum to 1 for gram calculation
+    mix_sum = float(np.sum(mix_arr))
+    recipe = mix_arr / mix_sum if mix_sum > 0 else np.full_like(mix_arr, 1.0 / len(mix_arr))
+
     target_lab = ref2lab(target_spec, xyz_cache)
     pred_lab = ref2lab(pred_arr, xyz_cache)
 
@@ -173,8 +177,8 @@ async def api_optimize(req: OptimizeRequest):
         target_rgb=lab_to_rgb(float(target_lab[0]), float(target_lab[1]), float(target_lab[2])),
         predicted_rgb=lab_to_rgb(float(pred_lab[0]), float(pred_lab[1]), float(pred_lab[2])),
         mix=[
-            MixEntry(color=name, fraction=round(float(f), 4), grams=round(float(f) * req.total_grams, 2))
-            for name, f in zip(ingredient_names, mix_arr)
+            MixEntry(color=name, fraction=round(float(r), 4), grams=round(float(r) * req.total_grams, 2))
+            for name, r in zip(ingredient_names, recipe)
         ],
         wavelengths=wavelengths.tolist(),
         target_spectrum=target_spec.tolist(),
