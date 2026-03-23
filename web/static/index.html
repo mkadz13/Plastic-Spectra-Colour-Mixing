@@ -184,23 +184,24 @@
     }
 
     /* Swatches */
-    .swatch-row { display: flex; align-items: center; gap: 1.5rem; justify-content: center; padding: 0.5rem 0; }
-    .swatch-col { text-align: center; }
-    .swatch-label { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.3rem; }
+    .swatch-row { display: flex; align-items: center; justify-content: center; gap: 2rem; padding: 0.5rem 0; }
+    .swatch-col { width: 140px; display: flex; flex-direction: column; align-items: center; }
+    .swatch-label { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.3rem; text-align: center; }
     .swatch-box { width: 100px; height: 54px; border: 1px solid var(--border); border-radius: 3px; }
-    .swatch-lab { font-family: Consolas, 'Courier New', monospace; font-size: 0.7rem; color: var(--muted); margin-top: 0.25rem; }
-    .swatch-arrow { font-size: 1.3rem; color: var(--muted); }
+    .swatch-lab { font-family: Consolas, 'Courier New', monospace; font-size: 0.7rem; color: var(--muted); margin-top: 0.25rem; text-align: center; }
+    .swatch-arrow { font-size: 1.3rem; color: var(--muted); align-self: center; }
     .de-line {
       text-align: center;
-      margin-top: 0.5rem;
-      font-size: 0.82rem;
+      margin-top: 0.8rem;
+      font-size: 0.85rem;
     }
     .de-tag {
       display: inline-block;
-      padding: 0.15rem 0.6rem;
+      padding: 0.2rem 0.8rem;
       border-radius: 3px;
       font-weight: 600;
-      font-size: 0.8rem;
+      font-size: 0.85rem;
+      font-family: Consolas, 'Courier New', monospace;
     }
     .de-good { background: #e8f5e9; color: #2e7d32; }
     .de-ok   { background: #fff8e1; color: #b8860b; }
@@ -319,7 +320,7 @@
     <button class="btn-optimize" id="optimize-btn">Optimize</button>
 
     <div class="cite">
-      Kadri, M.; Pearce, J.M. "SpectOptiBlend: Spectral Optimization for Color Matching in Recycled 3D Printing Filament."
+      Pearce, J.M. "SpectOptiBlend: Spectral Optimization for Color Matching in Recycled 3D Printing Filament."
       <em>Additive Manufacturing</em>, 2025.
       <a href="https://doi.org/10.55092/am20250007" target="_blank">doi:10.55092/am20250007</a>
     </div>
@@ -335,6 +336,7 @@
     </div>
   </div>
 </div>
+
 
 <script>
 const API = "https://spectoptiblend-api.onrender.com";
@@ -403,11 +405,11 @@ function renderResults(data) {
   if (es) es.style.display = "none";
 
   const de = data.deltaE2000;
-  let deClass = "de-bad", deLabel = "Very different";
-  if (de < 1)      { deClass = "de-good"; deLabel = "Indistinguishable"; }
-  else if (de < 2)  { deClass = "de-good"; deLabel = "Barely perceptible"; }
-  else if (de < 5)  { deClass = "de-ok";   deLabel = "Noticeable"; }
-  else if (de < 10) { deClass = "de-ok";   deLabel = "Obvious"; }
+  let deClass = "de-bad";
+  if (de < 1)       { deClass = "de-good"; }
+  else if (de < 2)  { deClass = "de-good"; }
+  else if (de < 5)  { deClass = "de-ok"; }
+  else if (de < 10) { deClass = "de-ok"; }
 
   const tRGB = `rgb(${data.target_rgb.join(",")})`;
   const pRGB = `rgb(${data.predicted_rgb.join(",")})`;
@@ -439,7 +441,7 @@ function renderResults(data) {
         </div>
       </div>
       <div class="de-line">
-        <span class="de-tag ${deClass}">&Delta;E 2000 = ${de.toFixed(5)} &mdash; ${deLabel}</span>
+        <span class="de-tag ${deClass}">&Delta;E 2000 = ${de.toFixed(5)}</span>
       </div>
     </div>
 
@@ -482,6 +484,4 @@ function renderResults(data) {
 loadColors();
 </script>
 </body>
-</html>
-
 </html>
