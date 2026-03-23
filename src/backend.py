@@ -15,9 +15,6 @@ ModeName = Literal["paper", "recipe"]
 WeightsName = Literal["uniform", "notebook"]
 
 
-NUM_RESTARTS = 10
-
-# The paper's specific starting point for 8 ingredients
 _PAPER_INITIAL_8 = np.array([0.23, 0.13, 0.02, 0.08, 0.15, 0.3, 0.07, 0.04])
 
 
@@ -165,20 +162,6 @@ def _objective(
     return float(rms_weight * rms_error + delta_e_weight * delta_e_error)
 
 
-def _random_starts(n: int, num_starts: int, rng: np.random.Generator) -> List[np.ndarray]:
-    starts = []
-    if n == 8:
-        starts.append(_PAPER_INITIAL_8.copy())
-    else:
-        starts.append(np.full(n, 0.5))
-    for _ in range(num_starts - 1):
-        x = rng.dirichlet(np.ones(n))
-        x *= rng.uniform(0.5, 1.5)
-        x = np.clip(x, 0.0, 1.0)
-        starts.append(x)
-    return starts
-
-
 def optimize_mix(
     target_spectrum: np.ndarray,
     ingredient_spectra: List[np.ndarray],
@@ -205,27 +188,21 @@ def optimize_mix(
     bounds = [(0, 1) for _ in range(n)]
 
     if initial is not None:
-        starts = [np.asarray(initial, dtype=float)]
+        x0 = np.asarray(initial, dtype=float)
+    elif n == 8:
+        x0 = _PAPER_INITIAL_8.copy()
     else:
-        rng = np.random.default_rng(42)
-        starts = _random_starts(n, NUM_RESTARTS, rng)
+        x0 = np.full(n, 0.1)
 
-    best_res = None
-    best_fun = np.inf
+    result = minimize(
+        _objective,
+        x0,
+        args=(target_spectrum, target_lab, colorant_spectra, weights, xyz, rms_w, de_w),
+        method=solver,
+        bounds=bounds,
+    )
 
-    for x0 in starts:
-        res = minimize(
-            _objective,
-            x0,
-            args=(target_spectrum, target_lab, colorant_spectra, weights, xyz, rms_w, de_w),
-            method=solver,
-            bounds=bounds,
-        )
-        if res.fun < best_fun:
-            best_fun = res.fun
-            best_res = res
-
-    x = np.clip(best_res.x, 0.0, 1.0)
+    x = np.clip(result.x, 0.0, 1.0)
 
     if mode == "recipe":
         s = np.sum(x)
@@ -239,13 +216,13 @@ def optimize_mix(
     de = cal_delta_e(ref2lab(pred, xyz), target_lab)
 
     return {
-        "success": bool(best_res.success),
-        "message": str(best_res.message),
+        "success": bool(result.success),
+        "message": str(result.message),
         "mix": x,
         "predicted_spectrum": pred,
         "rms": rms,
         "deltaE2000": de,
-        "fun": float(best_res.fun),
+        "fun": float(result.fun),
         "solver": solver,
         "mode": mode,
         "weights_mode": weights_mode,
