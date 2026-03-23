@@ -3,230 +3,346 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SpectOptiBlend</title>
+  <title>SpectOptiBlend – Western University</title>
   <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg:       #f5f5f7;
-      --surface:  #ffffff;
-      --surface2: #f0f0f3;
-      --border:   #ddd;
-      --text:     #222;
-      --muted:    #666;
-      --purple:   #4F2683;
-      --purple-lt:#6b3fa0;
-      --success:  #2e7d32;
-      --warn:     #b8860b;
-      --danger:   #c62828;
-      --radius:   8px;
+      --purple: #4F2683;
+      --purple-dark: #3b1c63;
+      --gold: #FFC72C;
+      --bg: #fff;
+      --surface: #f7f7f8;
+      --border: #d9d9d9;
+      --text: #333;
+      --muted: #6b6b6b;
     }
     body {
-      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background: var(--bg);
       color: var(--text);
-      min-height: 100vh;
+      line-height: 1.5;
     }
 
-    /* Header */
-    header {
+    /* ---- Header bar ---- */
+    .top-bar {
       background: var(--purple);
       color: #fff;
-      padding: 0.8rem 1.5rem;
+      padding: 1rem 2rem;
       display: flex;
       align-items: center;
-      gap: 0.8rem;
-    }
-    header img { height: 36px; }
-    header h1 { font-size: 1.25rem; font-weight: 700; }
-    header .subtitle { font-size: 0.85rem; opacity: 0.85; }
-
-    /* Layout */
-    .app {
-      display: grid;
-      grid-template-columns: 300px 1fr;
-      min-height: calc(100vh - 52px);
-    }
-
-    /* Sidebar */
-    .sidebar {
-      background: var(--surface);
-      border-right: 1px solid var(--border);
-      padding: 1.2rem;
-      display: flex;
-      flex-direction: column;
       gap: 1rem;
-      overflow-y: auto;
     }
-    .section-title {
-      font-size: 0.7rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
+    .top-bar .logo-wrap {
+      background: #fff;
+      border-radius: 6px;
+      padding: 4px 6px;
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .top-bar .logo-wrap img { height: 40px; display: block; }
+    .top-bar .header-text h1 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .top-bar .header-text p {
+      font-size: 0.85rem;
+      opacity: 0.9;
+      font-weight: 400;
+    }
+
+    /* ---- Breadcrumb / sub-nav ---- */
+    .sub-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0.5rem 2rem;
+      font-size: 0.8rem;
       color: var(--muted);
-      margin-bottom: 0.3rem;
+    }
+    .sub-bar a { color: var(--purple); text-decoration: none; }
+    .sub-bar a:hover { text-decoration: underline; }
+
+    /* ---- Page layout ---- */
+    .page {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1.5rem 2rem 3rem;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 2rem;
+    }
+
+    /* ---- Sidebar ---- */
+    .sidebar h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--purple);
+      margin-bottom: 1rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 2px solid var(--purple);
+    }
+    .field-group { margin-bottom: 1rem; }
+    .field-label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.25rem;
     }
     select, input[type="number"] {
       width: 100%;
-      padding: 0.5rem;
-      background: var(--surface2);
+      padding: 0.45rem 0.5rem;
       border: 1px solid var(--border);
-      border-radius: var(--radius);
-      color: var(--text);
+      border-radius: 3px;
       font-size: 0.85rem;
+      color: var(--text);
+      background: #fff;
     }
-    select:focus, input:focus { border-color: var(--purple); outline: none; }
+    select:focus, input:focus { outline: 2px solid var(--purple); outline-offset: -1px; }
 
     .ingredient-list {
-      max-height: 240px;
+      max-height: 220px;
       overflow-y: auto;
       border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 0.4rem;
+      border-radius: 3px;
+      background: #fff;
     }
     .ingredient-item {
       display: flex;
       align-items: center;
       gap: 0.4rem;
-      padding: 0.3rem 0.4rem;
-      border-radius: 4px;
+      padding: 0.3rem 0.5rem;
+      font-size: 0.85rem;
       cursor: pointer;
+      border-bottom: 1px solid #eee;
     }
-    .ingredient-item:hover { background: rgba(79,38,131,0.06); }
+    .ingredient-item:last-child { border-bottom: none; }
+    .ingredient-item:hover { background: #f3f0f8; }
     .ingredient-item input[type="checkbox"] { accent-color: var(--purple); }
-    .ingredient-item label { cursor: pointer; flex: 1; font-size: 0.85rem; }
+    .ingredient-item label { cursor: pointer; flex: 1; }
 
-    .btn {
+    .btn-optimize {
       width: 100%;
       padding: 0.6rem;
+      background: var(--purple);
+      color: #fff;
       border: none;
-      border-radius: var(--radius);
+      border-radius: 3px;
       font-size: 0.9rem;
       font-weight: 600;
       cursor: pointer;
+      margin-top: 0.5rem;
     }
-    .btn-primary { background: var(--purple); color: #fff; }
-    .btn-primary:hover { background: var(--purple-lt); }
-    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-optimize:hover { background: var(--purple-dark); }
+    .btn-optimize:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    /* Main */
-    .main {
-      padding: 1.2rem 1.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      overflow-y: auto;
-    }
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1rem 1.2rem;
-    }
-    .card-title { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.8rem; }
-
-    /* Swatches */
-    .swatches { display: flex; gap: 1.2rem; align-items: center; justify-content: center; }
-    .swatch-group { text-align: center; }
-    .swatch-group .label { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.3rem; }
-    .swatch-box { width: 90px; height: 50px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 0.3rem; }
-    .swatch-group .lab-text { font-family: Consolas, monospace; font-size: 0.7rem; color: var(--muted); }
-    .swatch-arrow { font-size: 1.2rem; color: var(--muted); margin-top: 0.4rem; }
-    .de-badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.8rem; font-weight: 600; margin-top: 0.4rem; }
-    .de-good { background: #e8f5e9; color: var(--success); }
-    .de-ok   { background: #fff8e1; color: var(--warn); }
-    .de-bad  { background: #ffebee; color: var(--danger); }
-
-    /* Metrics */
-    .metrics { display: flex; gap: 0.8rem; flex-wrap: wrap; }
-    .metric { flex: 1; min-width: 120px; background: var(--surface2); border-radius: var(--radius); padding: 0.6rem; text-align: center; }
-    .metric .value { font-size: 1.1rem; font-weight: 700; font-family: Consolas, monospace; }
-    .metric .label { font-size: 0.7rem; color: var(--muted); margin-top: 0.15rem; }
-
-    /* Table */
-    .results-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-    .results-table th { text-align: left; padding: 0.4rem 0.6rem; font-weight: 600; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; border-bottom: 1px solid var(--border); }
-    .results-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border); }
-    .results-table tr:last-child td { border-bottom: none; }
-    .results-table .num { font-family: Consolas, monospace; text-align: right; }
-
-    /* Note */
-    .note-banner { background: #fff8e1; border: 1px solid #ffe082; border-radius: var(--radius); padding: 0.5rem 0.8rem; font-size: 0.8rem; color: var(--warn); }
-
-    /* Plot */
-    #plot { width: 100%; height: 360px; }
-
-    /* Footer / citation */
-    .citation {
+    .cite {
+      margin-top: 1.5rem;
+      padding-top: 0.8rem;
+      border-top: 1px solid var(--border);
       font-size: 0.75rem;
       color: var(--muted);
       line-height: 1.5;
-      padding: 0.8rem 0 0 0;
-      border-top: 1px solid var(--border);
     }
-    .citation a { color: var(--purple); }
+    .cite a { color: var(--purple); }
 
-    /* Empty state */
-    .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--muted); text-align: center; gap: 0.4rem; }
-    .empty-state p { max-width: 280px; font-size: 0.9rem; }
+    /* ---- Main content ---- */
+    .content h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--purple);
+      margin-bottom: 1rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 2px solid var(--purple);
+    }
+
+    .empty-msg {
+      text-align: center;
+      color: var(--muted);
+      padding: 4rem 1rem;
+      font-size: 0.9rem;
+    }
+
+    /* Results sections */
+    .results-section { margin-bottom: 1.5rem; }
+    .results-section h3 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.6rem;
+    }
+
+    .note-banner {
+      background: #fff8e1;
+      border-left: 3px solid #f9a825;
+      padding: 0.5rem 0.8rem;
+      font-size: 0.8rem;
+      color: #7a6200;
+      margin-bottom: 1rem;
+    }
+
+    /* Swatches */
+    .swatch-row { display: flex; align-items: center; gap: 1.5rem; justify-content: center; padding: 0.5rem 0; }
+    .swatch-col { text-align: center; }
+    .swatch-label { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.3rem; }
+    .swatch-box { width: 100px; height: 54px; border: 1px solid var(--border); border-radius: 3px; }
+    .swatch-lab { font-family: Consolas, 'Courier New', monospace; font-size: 0.7rem; color: var(--muted); margin-top: 0.25rem; }
+    .swatch-arrow { font-size: 1.3rem; color: var(--muted); }
+    .de-line {
+      text-align: center;
+      margin-top: 0.5rem;
+      font-size: 0.82rem;
+    }
+    .de-tag {
+      display: inline-block;
+      padding: 0.15rem 0.6rem;
+      border-radius: 3px;
+      font-weight: 600;
+      font-size: 0.8rem;
+    }
+    .de-good { background: #e8f5e9; color: #2e7d32; }
+    .de-ok   { background: #fff8e1; color: #b8860b; }
+    .de-bad  { background: #ffebee; color: #c62828; }
+
+    /* Metrics row */
+    .metrics-row {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+    .metric-box {
+      flex: 1;
+      min-width: 110px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 0.5rem 0.6rem;
+      text-align: center;
+    }
+    .metric-box .val {
+      font-family: Consolas, 'Courier New', monospace;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+    .metric-box .lbl { font-size: 0.7rem; color: var(--muted); }
+
+    /* Table */
+    .recipe-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .recipe-table th {
+      text-align: left;
+      padding: 0.4rem 0.6rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      border-bottom: 2px solid var(--border);
+    }
+    .recipe-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid #eee; }
+    .recipe-table tr:last-child td { border-bottom: none; }
+    .recipe-table .num { font-family: Consolas, 'Courier New', monospace; text-align: right; }
+    .recipe-table th.num { text-align: right; }
+
+    /* Plot */
+    #plot { width: 100%; height: 340px; }
+
+    /* Footer */
+    .page-footer {
+      border-top: 3px solid var(--purple);
+      background: var(--surface);
+      padding: 1rem 2rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-align: center;
+    }
+    .page-footer a { color: var(--purple); text-decoration: none; }
+    .page-footer a:hover { text-decoration: underline; }
 
     /* Spinner */
-    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 0.3rem; }
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 0.3rem; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
     @media (max-width: 768px) {
-      .app { grid-template-columns: 1fr; }
-      .sidebar { border-right: none; border-bottom: 1px solid var(--border); }
+      .page { grid-template-columns: 1fr; padding: 1rem; }
+      .top-bar { padding: 0.8rem 1rem; }
+      .sub-bar { padding: 0.4rem 1rem; }
     }
   </style>
 </head>
 <body>
 
-<header>
-  <img src="Purplefast.png" alt="Logo" onerror="this.style.display='none'">
-  <div>
-    <h1>SpectOptiBlend</h1>
-    <div class="subtitle">Spectral Color Mixing Optimizer for Waste Plastic 3D Printing</div>
+<div class="top-bar">
+  <div class="logo-wrap">
+    <img src="https://www.appropedia.org/w/images/thumb/7/71/Purplefast.png/128px-Purplefast.png" alt="FAST Lab" onerror="this.parentElement.style.display='none'">
   </div>
-</header>
+  <div class="header-text">
+    <h1>SpectOptiBlend</h1>
+    <p>Spectral Color Mixing Optimizer for Waste Plastic 3D Printing</p>
+  </div>
+</div>
 
-<div class="app">
+<div class="sub-bar">
+  <a href="https://www.uwo.ca/sci/research/index.html">Western Science</a> &rsaquo;
+  <a href="https://www.appropedia.org/FAST">FAST Lab</a> &rsaquo;
+  SpectOptiBlend
+</div>
+
+<div class="page">
+  <!-- Sidebar -->
   <aside class="sidebar">
-    <div>
-      <div class="section-title">Target Color</div>
+    <h2>Configuration</h2>
+
+    <div class="field-group">
+      <label class="field-label" for="target-select">Target Color</label>
       <select id="target-select"></select>
     </div>
-    <div>
-      <div class="section-title">Ingredient Colors</div>
+
+    <div class="field-group">
+      <label class="field-label">Ingredient Colors</label>
       <div class="ingredient-list" id="ingredient-list"></div>
     </div>
-    <div>
-      <div class="section-title">Solver</div>
+
+    <div class="field-group">
+      <label class="field-label" for="solver-select">Solver</label>
       <select id="solver-select">
         <option value="Nelder-Mead" selected>Nelder-Mead</option>
         <option value="SLSQP">SLSQP</option>
         <option value="L-BFGS-B">L-BFGS-B</option>
       </select>
     </div>
-    <div>
-      <div class="section-title">Total Grams</div>
+
+    <div class="field-group">
+      <label class="field-label" for="total-grams">Total Grams</label>
       <input type="number" id="total-grams" value="200" min="1" max="5000" />
     </div>
-    <button class="btn btn-primary" id="optimize-btn">Optimize</button>
 
-    <div class="citation">
-      Based on: Kadri, M.; Pearce, J.M. SpectOptiBlend: Spectral Optimization for Color Matching in Recycled 3D Printing Filament.
+    <button class="btn-optimize" id="optimize-btn">Optimize</button>
+
+    <div class="cite">
+      Kadri, M.; Pearce, J.M. "SpectOptiBlend: Spectral Optimization for Color Matching in Recycled 3D Printing Filament."
       <em>Additive Manufacturing</em>, 2025.
       <a href="https://doi.org/10.55092/am20250007" target="_blank">doi:10.55092/am20250007</a>
     </div>
   </aside>
 
-  <main class="main" id="main-content">
-    <div class="empty-state" id="empty-state">
-      <p>Select a target color and check at least 2 ingredients, then click <strong>Optimize</strong>.</p>
+  <!-- Main content -->
+  <div class="content">
+    <h2>Results</h2>
+    <div id="main-content">
+      <div class="empty-msg" id="empty-state">
+        Select a target color and check at least two ingredients, then click <strong>Optimize</strong>.
+      </div>
     </div>
-  </main>
+  </div>
 </div>
+
+<footer class="page-footer">
+  &copy; 2025 <a href="https://www.appropedia.org/FAST">FAST Lab</a> &ndash;
+  <a href="https://www.uwo.ca">Western University</a> &middot;
+  Faculty of Science
+</footer>
 
 <script>
 const API = "https://spectoptiblend-api.onrender.com";
@@ -271,7 +387,7 @@ document.getElementById("optimize-btn").addEventListener("click", async () => {
 
   const btn = document.getElementById("optimize-btn");
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Optimizing...';
+  btn.innerHTML = '<span class="spinner"></span>Optimizing\u2026';
 
   try {
     const res = await fetch(`${API}/api/optimize`, {
@@ -279,7 +395,7 @@ document.getElementById("optimize-btn").addEventListener("click", async () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ target, ingredients, solver, total_grams: totalGrams }),
     });
-    if (!res.ok) { const err = await res.json(); throw new Error(err.detail || "Failed"); }
+    if (!res.ok) { const err = await res.json(); throw new Error(err.detail || "Request failed"); }
     renderResults(await res.json());
   } catch (e) {
     alert("Error: " + e.message);
@@ -290,7 +406,7 @@ document.getElementById("optimize-btn").addEventListener("click", async () => {
 });
 
 function renderResults(data) {
-  const main = document.getElementById("main-content");
+  const container = document.getElementById("main-content");
   const es = document.getElementById("empty-state");
   if (es) es.style.display = "none";
 
@@ -312,54 +428,61 @@ function renderResults(data) {
     `<tr><td>${m.color}</td><td class="num">${m.fraction.toFixed(4)}</td><td class="num">${m.grams.toFixed(2)}</td></tr>`
   ).join("");
 
-  main.innerHTML = `
+  container.innerHTML = `
     ${note}
-    <div class="card">
-      <div class="card-title">Color Comparison</div>
-      <div class="swatches">
-        <div class="swatch-group">
-          <div class="label">Target</div>
+
+    <div class="results-section">
+      <h3>Color Comparison</h3>
+      <div class="swatch-row">
+        <div class="swatch-col">
+          <div class="swatch-label">Target</div>
           <div class="swatch-box" style="background:${tRGB}"></div>
-          <div class="lab-text">L*=${tL.L} a*=${tL.a} b*=${tL.b}</div>
+          <div class="swatch-lab">L*=${tL.L} &ensp;a*=${tL.a} &ensp;b*=${tL.b}</div>
         </div>
-        <div class="swatch-arrow">&#8594;</div>
-        <div class="swatch-group">
-          <div class="label">Predicted Mix</div>
+        <div class="swatch-arrow">&rarr;</div>
+        <div class="swatch-col">
+          <div class="swatch-label">Predicted Mix</div>
           <div class="swatch-box" style="background:${pRGB}"></div>
-          <div class="lab-text">L*=${pL.L} a*=${pL.a} b*=${pL.b}</div>
+          <div class="swatch-lab">L*=${pL.L} &ensp;a*=${pL.a} &ensp;b*=${pL.b}</div>
         </div>
       </div>
-      <div style="text-align:center;margin-top:0.5rem">
-        <span class="de-badge ${deClass}">&Delta;E 2000: ${de.toFixed(5)} &mdash; ${deLabel}</span>
+      <div class="de-line">
+        <span class="de-tag ${deClass}">&Delta;E 2000 = ${de.toFixed(5)} &mdash; ${deLabel}</span>
       </div>
     </div>
-    <div class="metrics">
-      <div class="metric"><div class="value">${de.toFixed(3)}</div><div class="label">&Delta;E 2000</div></div>
-      <div class="metric"><div class="value">${data.rms.toFixed(4)}</div><div class="label">Weighted RMS</div></div>
-      <div class="metric"><div class="value">${data.solver}</div><div class="label">Solver</div></div>
-      <div class="metric"><div class="value">${data.target_name}</div><div class="label">Target</div></div>
+
+    <div class="results-section">
+      <h3>Metrics</h3>
+      <div class="metrics-row">
+        <div class="metric-box"><div class="val">${de.toFixed(3)}</div><div class="lbl">&Delta;E 2000</div></div>
+        <div class="metric-box"><div class="val">${data.rms.toFixed(4)}</div><div class="lbl">Weighted RMS</div></div>
+        <div class="metric-box"><div class="val">${data.solver}</div><div class="lbl">Solver</div></div>
+        <div class="metric-box"><div class="val">${data.target_name}</div><div class="lbl">Target</div></div>
+      </div>
     </div>
-    <div class="card">
-      <div class="card-title">Target vs Predicted Spectrum</div>
+
+    <div class="results-section">
+      <h3>Spectral Plot</h3>
       <div id="plot"></div>
     </div>
-    <div class="card">
-      <div class="card-title">Mixing Recipe</div>
-      <table class="results-table">
-        <thead><tr><th>Color</th><th style="text-align:right">Fraction</th><th style="text-align:right">Grams</th></tr></thead>
+
+    <div class="results-section">
+      <h3>Mixing Recipe</h3>
+      <table class="recipe-table">
+        <thead><tr><th>Color</th><th class="num">Ratio</th><th class="num">Grams</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>`;
 
   Plotly.newPlot("plot", [
     { x: data.wavelengths, y: data.target_spectrum, name: "Target", line: { color: "#4F2683", width: 2 } },
-    { x: data.wavelengths, y: data.predicted_spectrum, name: "Predicted", line: { color: "#e53935", width: 2, dash: "dot" } },
+    { x: data.wavelengths, y: data.predicted_spectrum, name: "Predicted", line: { color: "#c62828", width: 2, dash: "dash" } },
   ], {
     paper_bgcolor: "#fff", plot_bgcolor: "#fff",
-    font: { color: "#444", family: "Segoe UI", size: 12 },
-    xaxis: { title: "Wavelength (nm)", gridcolor: "#eee" },
-    yaxis: { title: "Reflectance", gridcolor: "#eee" },
-    legend: { orientation: "h", y: 1.1 },
+    font: { color: "#444", family: "Segoe UI, sans-serif", size: 12 },
+    xaxis: { title: "Wavelength (nm)", gridcolor: "#e6e6e6" },
+    yaxis: { title: "Reflectance", gridcolor: "#e6e6e6" },
+    legend: { orientation: "h", y: 1.08 },
     margin: { t: 20, r: 20, b: 45, l: 50 },
   }, { responsive: true, displayModeBar: false });
 }
@@ -367,4 +490,6 @@ function renderResults(data) {
 loadColors();
 </script>
 </body>
+</html>
+
 </html>
