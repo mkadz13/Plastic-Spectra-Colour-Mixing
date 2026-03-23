@@ -1,11 +1,14 @@
 Spectral color mixing optimizer for waste plastic 3D printing. Takes spectral reflectance data from recycled plastics and calculates optimal mixing ratios to reproduce a target color.
 
 ## Setup:
+
+```
 git clone https://github.com/mkadz13/Plastic-Spectra-Colour-Mixing.git
 cd Plastic-Spectra-Colour-Mixing
 python -m venv venv
 venv/Scripts/activate
 pip install -r requirements.txt
+```
 
 ## Desktop Application:
 cd Plastic-Spectra-Colour-Mixing
