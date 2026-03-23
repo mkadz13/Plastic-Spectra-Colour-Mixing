@@ -217,6 +217,10 @@ class MainWindow(QWidget):
         predicted = np.array(result["predicted_spectrum"], dtype=float)
         total_g = float(self.total_grams.value())
 
+        # Normalize fractions so they sum to 1 for gram calculation
+        mix_sum = np.sum(mix)
+        recipe = mix / mix_sum if mix_sum > 0 else np.full_like(mix, 1.0 / len(mix))
+
         target_lab = ref2lab(target, self.xyz)
         pred_lab = ref2lab(predicted, self.xyz)
 
@@ -233,12 +237,12 @@ class MainWindow(QWidget):
         lines.append(f"  Target  Lab: L*={target_lab[0]:6.2f}  a*={target_lab[1]:6.2f}  b*={target_lab[2]:6.2f}")
         lines.append(f"  Predict Lab: L*={pred_lab[0]:6.2f}  a*={pred_lab[1]:6.2f}  b*={pred_lab[2]:6.2f}")
         lines.append("")
-        lines.append(f"Mix  ({total_g:.0f} g total):")
-        lines.append(f"{'Color':<15} {'Fraction':>10} {'Grams':>10}")
+        lines.append(f"Mixing Recipe  ({total_g:.0f} g total):")
+        lines.append(f"{'Color':<15} {'Ratio':>10} {'Grams':>10}")
         lines.append("-" * 37)
-        for name, frac in zip(ingredient_names, mix):
-            g = total_g * frac
-            lines.append(f"{name:<15} {frac:>10.4f} {g:>10.2f}")
+        for name, r_frac in zip(ingredient_names, recipe):
+            g = total_g * r_frac
+            lines.append(f"{name:<15} {r_frac:>10.4f} {g:>10.2f}")
 
         self.output.setPlainText("\n".join(lines))
 
