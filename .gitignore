@@ -1,0 +1,12 @@
+venv/
+__pycache__/
+*.pyc
+.env
+.idea/
+Errors/
+Interpolation/
+Probe Holder/
+SpecOptiBlend/
+Dataset/plot sheets/
+Dataset/cmyk-10nm.xlsx
+Dataset/XYZ.xlsx

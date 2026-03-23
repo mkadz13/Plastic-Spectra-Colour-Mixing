@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SpectOptiBlend</title>
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:       #f5f5f7;
+      --surface:  #ffffff;
+      --surface2: #f0f0f3;
+      --border:   #ddd;
+      --text:     #222;
+      --muted:    #666;
+      --purple:   #4F2683;
+      --purple-lt:#6b3fa0;
+      --success:  #2e7d32;
+      --warn:     #b8860b;
+      --danger:   #c62828;
+      --radius:   8px;
+    }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* Header */
+    header {
+      background: var(--purple);
+      color: #fff;
+      padding: 0.8rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+    }
+    header img { height: 36px; }
+    header h1 { font-size: 1.25rem; font-weight: 700; }
+    header .subtitle { font-size: 0.85rem; opacity: 0.85; }
+
+    /* Layout */
+    .app {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      min-height: calc(100vh - 52px);
+    }
+
+    /* Sidebar */
+    .sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      overflow-y: auto;
+    }
+    .section-title {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 0.3rem;
+    }
+    select, input[type="number"] {
+      width: 100%;
+      padding: 0.5rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 0.85rem;
+    }
+    select:focus, input:focus { border-color: var(--purple); outline: none; }
+
+    .ingredient-list {
+      max-height: 240px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.4rem;
+    }
+    .ingredient-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.3rem 0.4rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .ingredient-item:hover { background: rgba(79,38,131,0.06); }
+    .ingredient-item input[type="checkbox"] { accent-color: var(--purple); }
+    .ingredient-item label { cursor: pointer; flex: 1; font-size: 0.85rem; }
+
+    .btn {
+      width: 100%;
+      padding: 0.6rem;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-primary { background: var(--purple); color: #fff; }
+    .btn-primary:hover { background: var(--purple-lt); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Main */
+    .main {
+      padding: 1.2rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      overflow-y: auto;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.2rem;
+    }
+    .card-title { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.8rem; }
+
+    /* Swatches */
+    .swatches { display: flex; gap: 1.2rem; align-items: center; justify-content: center; }
+    .swatch-group { text-align: center; }
+    .swatch-group .label { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.3rem; }
+    .swatch-box { width: 90px; height: 50px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 0.3rem; }
+    .swatch-group .lab-text { font-family: Consolas, monospace; font-size: 0.7rem; color: var(--muted); }
+    .swatch-arrow { font-size: 1.2rem; color: var(--muted); margin-top: 0.4rem; }
+    .de-badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.8rem; font-weight: 600; margin-top: 0.4rem; }
+    .de-good { background: #e8f5e9; color: var(--success); }
+    .de-ok   { background: #fff8e1; color: var(--warn); }
+    .de-bad  { background: #ffebee; color: var(--danger); }
+
+    /* Metrics */
+    .metrics { display: flex; gap: 0.8rem; flex-wrap: wrap; }
+    .metric { flex: 1; min-width: 120px; background: var(--surface2); border-radius: var(--radius); padding: 0.6rem; text-align: center; }
+    .metric .value { font-size: 1.1rem; font-weight: 700; font-family: Consolas, monospace; }
+    .metric .label { font-size: 0.7rem; color: var(--muted); margin-top: 0.15rem; }
+
+    /* Table */
+    .results-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .results-table th { text-align: left; padding: 0.4rem 0.6rem; font-weight: 600; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+    .results-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border); }
+    .results-table tr:last-child td { border-bottom: none; }
+    .results-table .num { font-family: Consolas, monospace; text-align: right; }
+
+    /* Note */
+    .note-banner { background: #fff8e1; border: 1px solid #ffe082; border-radius: var(--radius); padding: 0.5rem 0.8rem; font-size: 0.8rem; color: var(--warn); }
+
+    /* Plot */
+    #plot { width: 100%; height: 360px; }
+
+    /* Footer / citation */
+    .citation {
+      font-size: 0.75rem;
+      color: var(--muted);
+      line-height: 1.5;
+      padding: 0.8rem 0 0 0;
+      border-top: 1px solid var(--border);
+    }
+    .citation a { color: var(--purple); }
+
+    /* Empty state */
+    .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--muted); text-align: center; gap: 0.4rem; }
+    .empty-state p { max-width: 280px; font-size: 0.9rem; }
+
+    /* Spinner */
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 0.3rem; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 768px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { border-right: none; border-bottom: 1px solid var(--border); }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <img src="https://www.appropedia.org/w/images/thumb/7/71/Purplefast.png/128px-Purplefast.png" alt="Logo" onerror="this.style.display='none'">
+  <div>
+    <h1>SpectOptiBlend</h1>
+    <div class="subtitle">Spectral Color Mixing Optimizer for Waste Plastic 3D Printing</div>
+  </div>
+</header>
+
+<div class="app">
+  <aside class="sidebar">
+    <div>
+      <div class="section-title">Target Color</div>
+      <select id="target-select"></select>
+    </div>
+    <div>
+      <div class="section-title">Ingredient Colors</div>
+      <div class="ingredient-list" id="ingredient-list"></div>
+    </div>
+    <div>
+      <div class="section-title">Solver</div>
+      <select id="solver-select">
+        <option value="Nelder-Mead" selected>Nelder-Mead</option>
+        <option value="SLSQP">SLSQP</option>
+        <option value="L-BFGS-B">L-BFGS-B</option>
+      </select>
+    </div>
+    <div>
+      <div class="section-title">Total Grams</div>
+      <input type="number" id="total-grams" value="200" min="1" max="5000" />
+    </div>
+    <button class="btn btn-primary" id="optimize-btn">Optimize</button>
+
+    <div class="citation">
+      Based on: Kadri, M.; Pearce, J.M. SpectOptiBlend: Spectral Optimization for Color Matching in Recycled 3D Printing Filament.
+      <em>Additive Manufacturing</em>, 2025.
+      <a href="https://doi.org/10.55092/am20250007" target="_blank">doi:10.55092/am20250007</a>
+    </div>
+  </aside>
+
+  <main class="main" id="main-content">
+    <div class="empty-state" id="empty-state">
+      <p>Select a target color and check at least 2 ingredients, then click <strong>Optimize</strong>.</p>
+    </div>
+  </main>
+</div>
+
+<script>
+// ── Configuration ───────────────────────────────────────
+// For GitHub Pages: set this to your hosted backend URL, e.g.
+//   const API = "https://your-backend.onrender.com";
+// For local dev: leave empty (same origin)
+const API = "";
+
+async function loadColors() {
+  const res = await fetch(`${API}/api/colors`);
+  const data = await res.json();
+  const colors = data.colors;
+
+  const sel = document.getElementById("target-select");
+  colors.forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c; opt.textContent = c;
+    if (c === "Purple") opt.selected = true;
+    sel.appendChild(opt);
+  });
+
+  const list = document.getElementById("ingredient-list");
+  colors.forEach(c => {
+    const item = document.createElement("div");
+    item.className = "ingredient-item";
+    const cb = document.createElement("input");
+    cb.type = "checkbox"; cb.id = `ing-${c}`; cb.value = c;
+    const lbl = document.createElement("label");
+    lbl.htmlFor = `ing-${c}`; lbl.textContent = c;
+    item.appendChild(cb); item.appendChild(lbl);
+    item.addEventListener("click", e => { if (e.target !== cb) cb.checked = !cb.checked; });
+    list.appendChild(item);
+  });
+}
+
+document.getElementById("optimize-btn").addEventListener("click", async () => {
+  const target = document.getElementById("target-select").value;
+  const ingredients = [];
+  document.querySelectorAll("#ingredient-list input:checked").forEach(cb => {
+    if (cb.value !== target) ingredients.push(cb.value);
+  });
+  const solver = document.getElementById("solver-select").value;
+  const totalGrams = parseFloat(document.getElementById("total-grams").value) || 200;
+
+  if (ingredients.length < 2) { alert("Check at least 2 ingredient colors (excluding the target)."); return; }
+
+  const btn = document.getElementById("optimize-btn");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Optimizing...';
+
+  try {
+    const res = await fetch(`${API}/api/optimize`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target, ingredients, solver, total_grams: totalGrams }),
+    });
+    if (!res.ok) { const err = await res.json(); throw new Error(err.detail || "Failed"); }
+    renderResults(await res.json());
+  } catch (e) {
+    alert("Error: " + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Optimize";
+  }
+});
+
+function renderResults(data) {
+  const main = document.getElementById("main-content");
+  const es = document.getElementById("empty-state");
+  if (es) es.style.display = "none";
+
+  const de = data.deltaE2000;
+  let deClass = "de-bad", deLabel = "Very different";
+  if (de < 1)      { deClass = "de-good"; deLabel = "Indistinguishable"; }
+  else if (de < 2)  { deClass = "de-good"; deLabel = "Barely perceptible"; }
+  else if (de < 5)  { deClass = "de-ok";   deLabel = "Noticeable"; }
+  else if (de < 10) { deClass = "de-ok";   deLabel = "Obvious"; }
+
+  const tRGB = `rgb(${data.target_rgb.join(",")})`;
+  const pRGB = `rgb(${data.predicted_rgb.join(",")})`;
+  const tL = data.target_lab, pL = data.predicted_lab;
+
+  let note = "";
+  if (!data.success) note = `<div class="note-banner">Solver note: ${data.message} &mdash; results may still be usable, check Delta E.</div>`;
+
+  const rows = data.mix.map(m =>
+    `<tr><td>${m.color}</td><td class="num">${m.fraction.toFixed(4)}</td><td class="num">${m.grams.toFixed(2)}</td></tr>`
+  ).join("");
+
+  main.innerHTML = `
+    ${note}
+    <div class="card">
+      <div class="card-title">Color Comparison</div>
+      <div class="swatches">
+        <div class="swatch-group">
+          <div class="label">Target</div>
+          <div class="swatch-box" style="background:${tRGB}"></div>
+          <div class="lab-text">L*=${tL.L} a*=${tL.a} b*=${tL.b}</div>
+        </div>
+        <div class="swatch-arrow">&#8594;</div>
+        <div class="swatch-group">
+          <div class="label">Predicted Mix</div>
+          <div class="swatch-box" style="background:${pRGB}"></div>
+          <div class="lab-text">L*=${pL.L} a*=${pL.a} b*=${pL.b}</div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:0.5rem">
+        <span class="de-badge ${deClass}">&Delta;E 2000: ${de.toFixed(5)} &mdash; ${deLabel}</span>
+      </div>
+    </div>
+    <div class="metrics">
+      <div class="metric"><div class="value">${de.toFixed(3)}</div><div class="label">&Delta;E 2000</div></div>
+      <div class="metric"><div class="value">${data.rms.toFixed(4)}</div><div class="label">Weighted RMS</div></div>
+      <div class="metric"><div class="value">${data.solver}</div><div class="label">Solver</div></div>
+      <div class="metric"><div class="value">${data.target_name}</div><div class="label">Target</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Target vs Predicted Spectrum</div>
+      <div id="plot"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Mixing Recipe</div>
+      <table class="results-table">
+        <thead><tr><th>Color</th><th style="text-align:right">Fraction</th><th style="text-align:right">Grams</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+
+  Plotly.newPlot("plot", [
+    { x: data.wavelengths, y: data.target_spectrum, name: "Target", line: { color: "#4F2683", width: 2 } },
+    { x: data.wavelengths, y: data.predicted_spectrum, name: "Predicted", line: { color: "#e53935", width: 2, dash: "dot" } },
+  ], {
+    paper_bgcolor: "#fff", plot_bgcolor: "#fff",
+    font: { color: "#444", family: "Segoe UI", size: 12 },
+    xaxis: { title: "Wavelength (nm)", gridcolor: "#eee" },
+    yaxis: { title: "Reflectance", gridcolor: "#eee" },
+    legend: { orientation: "h", y: 1.1 },
+    margin: { t: 20, r: 20, b: 45, l: 50 },
+  }, { responsive: true, displayModeBar: false });
+}
+
+loadColors();
+</script>
+</body>
+</html>
