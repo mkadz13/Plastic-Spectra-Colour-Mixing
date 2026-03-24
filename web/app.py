@@ -115,6 +115,9 @@ class OptimizeResponse(BaseModel):
     target_spectrum: List[float]
     predicted_spectrum: List[float]
 
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
 
 @app.get("/")
 async def root():
