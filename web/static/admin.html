@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SpectOptiBlend — Admin</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --purple: #4F2683;
+      --purple-dark: #3b1c63;
+      --surface: #f7f7f8;
+      --border: #d9d9d9;
+      --text: #333;
+      --muted: #6b6b6b;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #fff;
+      color: var(--text);
+      line-height: 1.5;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 1.5rem;
+    }
+    h1 { font-size: 1.25rem; color: var(--purple); margin-bottom: 0.5rem; }
+    p.note { font-size: 0.85rem; color: var(--muted); margin-bottom: 1.25rem; }
+    label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.25rem; }
+    input[type="password"], input[type="text"] {
+      width: 100%; padding: 0.45rem 0.5rem; border: 1px solid var(--border); border-radius: 3px;
+      font-size: 0.9rem; margin-bottom: 1rem;
+    }
+    button {
+      padding: 0.45rem 0.9rem; border-radius: 3px; border: none; font-size: 0.85rem;
+      font-weight: 600; cursor: pointer; margin-right: 0.4rem; margin-top: 0.25rem;
+    }
+    .btn-primary { background: var(--purple); color: #fff; }
+    .btn-primary:hover { background: var(--purple-dark); }
+    .btn-ok { background: #2e7d32; color: #fff; }
+    .btn-no { background: #b71c1c; color: #fff; }
+    .row {
+      border: 1px solid var(--border); border-radius: 4px; padding: 0.75rem; margin-bottom: 0.6rem;
+      background: var(--surface);
+    }
+    .row .meta { font-size: 0.75rem; color: var(--muted); margin-top: 0.35rem; }
+    .err { color: #b71c1c; font-size: 0.85rem; margin-top: 0.5rem; }
+    .ok { color: #2e7d32; font-size: 0.85rem; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <h1>SpectOptiBlend — pending spectra</h1>
+  <p class="note">
+    Paste your <strong>ADMIN_SECRET</strong> (same value as on Render). It is stored only in this browser tab until you close the page.
+    Approve to add a color to the live library (target + ingredient menus).
+  </p>
+
+  <label for="api-base">API base URL</label>
+  <input type="text" id="api-base" />
+
+  <label for="admin-token">Admin secret</label>
+  <input type="password" id="admin-token" autocomplete="off" />
+
+  <button class="btn-primary" type="button" id="load-btn">Load pending</button>
+  <p id="msg" class="ok"></p>
+  <p id="err" class="err"></p>
+  <div id="list"></div>
+
+<script>
+const API = location.hostname === "127.0.0.1" || location.hostname === "localhost"
+  ? `${location.protocol}//${location.host}`
+  : "https://spectoptiblend-api.onrender.com";
+
+document.getElementById("api-base").value = API;
+
+function token() {
+  return document.getElementById("admin-token").value.trim();
+}
+
+function base() {
+  return document.getElementById("api-base").value.replace(/\/$/, "");
+}
+
+function setErr(t) {
+  document.getElementById("err").textContent = t || "";
+}
+function setOk(t) {
+  document.getElementById("msg").textContent = t || "";
+}
+
+async function loadPending() {
+  setErr(""); setOk("");
+  const t = token();
+  if (!t) { setErr("Enter admin secret."); return; }
+  const res = await fetch(`${base()}/api/admin/pending`, {
+    headers: { Authorization: "Bearer " + t },
+  });
+  if (!res.ok) {
+    let d = "";
+    try { d = (await res.json()).detail || ""; } catch (_) {}
+    setErr(d || res.statusText);
+    return;
+  }
+  const items = await res.json();
+  setOk(items.length ? `${items.length} pending.` : "No pending submissions.");
+  const box = document.getElementById("list");
+  box.innerHTML = "";
+  items.forEach(it => {
+    const el = document.createElement("div");
+    el.className = "row";
+    el.innerHTML = `
+      <div><strong>${escapeHtml(it.color_name)}</strong> <span style="color:#666">#${it.id}</span></div>
+      <div class="meta">${escapeHtml(it.submitter_email)} · ${escapeHtml(it.created_at)}</div>
+      <div>
+        <button class="btn-ok" type="button" data-a="${it.id}">Approve</button>
+        <button class="btn-no" type="button" data-r="${it.id}">Reject</button>
+      </div>`;
+    box.appendChild(el);
+  });
+  box.querySelectorAll("button[data-a]").forEach(b => {
+    b.addEventListener("click", () => act("approve", b.getAttribute("data-a")));
+  });
+  box.querySelectorAll("button[data-r]").forEach(b => {
+    b.addEventListener("click", () => act("reject", b.getAttribute("data-r")));
+  });
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+
+async function act(kind, id) {
+  setErr(""); setOk("");
+  const t = token();
+  const url = `${base()}/api/admin/${kind}/${id}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { Authorization: "Bearer " + t },
+  });
+  if (!res.ok) {
+    let d = "";
+    try { d = (await res.json()).detail || ""; } catch (_) {}
+    setErr(d || res.statusText);
+    return;
+  }
+  setOk(kind === "approve" ? "Approved." : "Rejected.");
+  await loadPending();
+}
+
+document.getElementById("load-btn").addEventListener("click", loadPending);
+</script>
+</body>
+</html>
