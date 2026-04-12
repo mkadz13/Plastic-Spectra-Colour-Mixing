@@ -96,7 +96,7 @@ class MainWindow(QWidget):
 
         left.addWidget(QLabel("Target color (the color you want to make):"))
         self.target_combo = QComboBox()
-        for name in self.all_spectra.keys():
+        for name in sorted(self.all_spectra.keys(), key=str.lower):
             self.target_combo.addItem(name)
         idx = self.target_combo.findText("Purple")
         if idx >= 0:
@@ -174,7 +174,7 @@ class MainWindow(QWidget):
 
     def _populate_ingredients(self):
         self.ingredients_list.clear()
-        for name in self.all_spectra.keys():
+        for name in sorted(self.all_spectra.keys(), key=str.lower):
             item = QListWidgetItem(name)
             item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
             item.setCheckState(Qt.Unchecked)
