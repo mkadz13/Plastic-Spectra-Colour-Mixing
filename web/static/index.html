@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SpectOptiBlend</title>
-  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js" defer></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -121,7 +121,25 @@
     .ingredient-item:last-child { border-bottom: none; }
     .ingredient-item:hover { background: #f3f0f8; }
     .ingredient-item input[type="checkbox"] { accent-color: var(--purple); }
+    .color-dot {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
     .ingredient-item label { cursor: pointer; flex: 1; }
+
+    .target-row { display: flex; align-items: center; gap: 0.5rem; }
+    .target-row select { flex: 1; }
+    .target-preview {
+      width: 28px;
+      height: 28px;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
 
     .btn-optimize {
       width: 100%;
@@ -137,6 +155,23 @@
     }
     .btn-optimize:hover { background: var(--purple-dark); }
     .btn-optimize:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-upload {
+      width: 100%;
+      margin-top: 0.45rem;
+      padding: 0.45rem;
+      background: #fff;
+      color: var(--purple);
+      border: 1px solid var(--purple);
+      border-radius: 3px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-upload:hover { background: #f3f0f8; }
+    .btn-upload:disabled { opacity: 0.5; cursor: not-allowed; }
+    .upload-hint { font-size: 0.72rem; color: var(--muted); margin: 0.35rem 0 0.25rem; line-height: 1.4; }
+    .upload-input { margin-top: 0.35rem; width: 100%; font-size: 0.8rem; }
 
     .cite {
       margin-top: 1.5rem;
@@ -276,7 +311,7 @@
 
 <div class="top-bar">
   <div class="logo-wrap">
-    <img src="Purplefast.png" alt="Logo" onerror="this.parentElement.style.display='none'">
+    <img src="/static/Purplefast.png" alt="Logo" onerror="this.parentElement.style.display='none'">
   </div>
   <div class="header-text">
     <h1>SpectOptiBlend</h1>
@@ -286,6 +321,10 @@
 
 <div class="sub-bar">
   SpectOptiBlend
+  <span style="margin:0 0.5rem">·</span>
+  <a href="#" id="link-template">Spectrum CSV template</a>
+  <span style="margin:0 0.5rem">·</span>
+  <a href="#" id="link-admin">Admin approvals</a>
 </div>
 
 <div class="page">
@@ -295,12 +334,25 @@
 
     <div class="field-group">
       <label class="field-label" for="target-select">Target Color</label>
-      <select id="target-select"></select>
+      <div class="target-row">
+        <select id="target-select"></select>
+        <div class="target-preview" id="target-preview"></div>
+      </div>
     </div>
 
     <div class="field-group">
       <label class="field-label">Ingredient Colors</label>
       <div class="ingredient-list" id="ingredient-list"></div>
+    </div>
+
+    <div class="field-group" style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);">
+      <label class="field-label">Add new spectrum (UWO)</label>
+      <p class="upload-hint">Uses the same wavelength grid as the paper. Download the template, replace reflectance values, then submit. One spectrum per file. After you approve it in Admin, it appears in <strong>both</strong> target and ingredient lists.</p>
+      <input class="upload-input" type="email" id="submit-email" placeholder="you@uwo.ca" autocomplete="email" />
+      <input class="upload-input" type="text" id="submit-color-name" placeholder="Color name (e.g. Lab sample 12)" maxlength="80" />
+      <input class="upload-input" type="file" id="submit-file" accept=".csv,text/csv" />
+      <button type="button" class="btn-upload" id="submit-btn">Submit for approval</button>
+      <div class="upload-hint" id="submit-msg" style="min-height:1.2em;"></div>
     </div>
 
     <div class="field-group">
@@ -340,34 +392,104 @@
 
 
 <script>
-const API = "https://spectoptiblend-api.onrender.com";
+const API = location.hostname === "127.0.0.1" || location.hostname === "localhost"
+  ? `${location.protocol}//${location.host}`
+  : "https://spectoptiblend-api.onrender.com";
+
+const ADMIN_URL = location.hostname === "127.0.0.1" || location.hostname === "localhost"
+  ? `${location.protocol}//${location.host}/admin.html`
+  : "https://spectoptiblend-api.onrender.com/admin.html";
+
+let colorRGBMap = {};
+
+document.getElementById("link-template").addEventListener("click", (e) => {
+  e.preventDefault();
+  window.open(`${API}/api/spectrum-template.csv`, "_blank", "noopener,noreferrer");
+});
+document.getElementById("link-admin").addEventListener("click", (e) => {
+  e.preventDefault();
+  window.open(ADMIN_URL, "_blank", "noopener,noreferrer");
+});
+
+function updateTargetPreview() {
+  const sel = document.getElementById("target-select");
+  const preview = document.getElementById("target-preview");
+  const rgb = colorRGBMap[sel.value];
+  preview.style.background = rgb ? `rgb(${rgb.join(",")})` : "transparent";
+}
 
 async function loadColors() {
   const res = await fetch(`${API}/api/colors`);
   const data = await res.json();
   const colors = data.colors;
 
+  colorRGBMap = {};
+  colors.forEach(c => { colorRGBMap[c.name] = c.rgb; });
+
   const sel = document.getElementById("target-select");
+  const prev = sel.value;
+  sel.replaceChildren();
   colors.forEach(c => {
     const opt = document.createElement("option");
-    opt.value = c; opt.textContent = c;
-    if (c === "Purple") opt.selected = true;
+    opt.value = c.name; opt.textContent = c.name;
+    if (c.name === prev || (!prev && c.name === "Purple")) opt.selected = true;
     sel.appendChild(opt);
   });
+  if (!sel.value && colors.length) sel.selectedIndex = 0;
+  sel.onchange = updateTargetPreview;
+  updateTargetPreview();
 
   const list = document.getElementById("ingredient-list");
+  list.replaceChildren();
   colors.forEach(c => {
     const item = document.createElement("div");
     item.className = "ingredient-item";
     const cb = document.createElement("input");
-    cb.type = "checkbox"; cb.id = `ing-${c}`; cb.value = c;
+    cb.type = "checkbox"; cb.id = `ing-${c.name}`; cb.value = c.name;
+    const dot = document.createElement("span");
+    dot.className = "color-dot";
+    dot.style.background = `rgb(${c.rgb.join(",")})`;
     const lbl = document.createElement("label");
-    lbl.htmlFor = `ing-${c}`; lbl.textContent = c;
-    item.appendChild(cb); item.appendChild(lbl);
+    lbl.htmlFor = `ing-${c.name}`; lbl.textContent = c.name;
+    item.appendChild(cb); item.appendChild(dot); item.appendChild(lbl);
     item.addEventListener("click", e => { if (e.target !== cb) cb.checked = !cb.checked; });
     list.appendChild(item);
   });
 }
+
+document.getElementById("submit-btn").addEventListener("click", async () => {
+  const msg = document.getElementById("submit-msg");
+  msg.textContent = "";
+  const email = document.getElementById("submit-email").value.trim();
+  const colorName = document.getElementById("submit-color-name").value.trim();
+  const fileInput = document.getElementById("submit-file");
+  const file = fileInput.files && fileInput.files[0];
+  if (!email || !colorName || !file) {
+    msg.textContent = "Enter your @uwo.ca email, color name, and choose a CSV file.";
+    return;
+  }
+  const fd = new FormData();
+  fd.append("submitter_email", email);
+  fd.append("color_name", colorName);
+  fd.append("file", file, file.name);
+  const btn = document.getElementById("submit-btn");
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${API}/api/submit-spectrum`, { method: "POST", body: fd });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      msg.textContent = typeof body.detail === "string" ? body.detail : (res.statusText || "Submit failed");
+      return;
+    }
+    msg.textContent = body.message || "Submitted.";
+    fileInput.value = "";
+    await loadColors();
+  } catch (e) {
+    msg.textContent = "Network error: " + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 document.getElementById("optimize-btn").addEventListener("click", async () => {
   const target = document.getElementById("target-select").value;
