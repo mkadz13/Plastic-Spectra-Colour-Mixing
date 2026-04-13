@@ -295,6 +295,8 @@ async def submit_spectrum(
         submission_id=sid,
         color_name=name,
         submitter_email=email.lower(),
+        uploaded_filename=(file.filename or "").strip(),
+
     )
 
     return SubmitSpectrumResponse(
