@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import secrets
 from datetime import datetime, timezone
@@ -9,6 +10,8 @@ import httpx
 import numpy as np
 import psycopg
 from psycopg.rows import dict_row
+
+_log = logging.getLogger("spectoptiblend.email")
 
 SCHEMA_DDL = """
 CREATE TABLE IF NOT EXISTS spectrum_submissions (
@@ -154,44 +157,57 @@ def send_new_submission_email(
     submission_id: int,
     color_name: str,
     submitter_email: str,
+    uploaded_filename: str = "",
 ) -> None:
     admin_to = os.environ.get("ADMIN_NOTIFY_EMAIL", "").strip()
-    api_key = os.environ.get("RESEND_API_KEY", "").strip()
-    from_addr = os.environ.get("NOTIFY_FROM_EMAIL", "").strip()
+    service_id = os.environ.get("EMAILJS_SERVICE_ID", "").strip()
+    template_id = os.environ.get("EMAILJS_TEMPLATE_ID", "").strip()
+    public_key = os.environ.get("EMAILJS_PUBLIC_KEY", "").strip()
+    private_key = os.environ.get("EMAILJS_PRIVATE_KEY", "").strip()
     base_url = os.environ.get("PUBLIC_APP_URL", "").rstrip("/")
 
     if not admin_to:
+        _log.warning("notify email skipped: ADMIN_NOTIFY_EMAIL is not set")
         return
-    subject = f"[SpectOptiBlend] New spectrum submission #{submission_id}: {color_name}"
-    lines = [
-        f"A student submitted a new spectrum for approval.",
-        f"",
-        f"ID:            {submission_id}",
-        f"Color name:    {color_name}",
-        f"Submitter:     {submitter_email}",
-        f"",
-    ]
-    if base_url:
-        lines.append(f"Admin UI: {base_url}/admin.html")
-    body = "\n".join(lines)
+    if not service_id or not template_id or not public_key:
+        _log.warning(
+            "notify email skipped: missing EmailJS config "
+            "(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY)"
+        )
+        return
 
-    if api_key and from_addr:
-        try:
-            r = httpx.post(
-                "https://api.resend.com/emails",
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "from": from_addr,
-                    "to": [admin_to],
-                    "subject": subject,
-                    "text": body,
-                },
-                timeout=20.0,
-            )
-            r.raise_for_status()
-        except Exception:
-            # Do not fail submission if email provider errors
-            pass
+    admin_url = f"{base_url}/admin.html" if base_url else ""
+    payload = {
+        "service_id": service_id,
+        "template_id": template_id,
+        "user_id": public_key,
+        "template_params": {
+            "to_email": admin_to,
+            "submission_id": str(submission_id),
+            "color_name": color_name,
+            "submitter_email": submitter_email,
+            "uploaded_filename": uploaded_filename or "(unknown filename)",
+            "admin_url": admin_url,
+        },
+    }
+    if private_key:
+        payload["accessToken"] = private_key
+
+    try:
+        r = httpx.post(
+            "https://api.emailjs.com/api/v1.0/email/send",
+            headers={"Content-Type": "application/json"},
+            json=payload,
+            timeout=20.0,
+        )
+        r.raise_for_status()
+        _log.info("EmailJS accepted notification status=%s", r.status_code)
+    except httpx.HTTPStatusError as e:
+        detail = e.response.text[:500] if e.response is not None else str(e)
+        _log.error(
+            "EmailJS HTTP error %s: %s",
+            e.response.status_code if e.response is not None else "?",
+            detail,
+        )
+    except Exception as e:
+        _log.exception("EmailJS request failed: %s", e)
