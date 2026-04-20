@@ -202,6 +202,10 @@ class PendingItem(BaseModel):
     created_at: str
 
 
+class RemoveColorRequest(BaseModel):
+    color_name: str
+
+
 @app.api_route("/health", methods=["GET", "HEAD"])
 async def health():
     return {"status": "ok"}
@@ -368,6 +372,45 @@ async def admin_reject(request: Request, row_id: int, authorization: Optional[st
     if not ok:
         raise HTTPException(409, "Could not reject (maybe already processed).")
     return {"ok": True, "message": "Rejected."}
+
+
+@app.post("/api/admin/remove-color")
+@_limiter.limit(RATE_LIMIT_ADMIN)
+async def admin_remove_color(
+    request: Request,
+    payload: RemoveColorRequest,
+    authorization: Optional[str] = Header(default=None),
+):
+    if not db_spectra.database_url():
+        raise HTTPException(503, "DATABASE_URL is not set.")
+    _require_admin(authorization)
+
+    nm = payload.color_name.strip()
+    if not nm or not _COLOR_NAME_RE.match(nm):
+        raise HTTPException(
+            400,
+            "Invalid color name (1–80 chars: letters, numbers, spaces, underscore, hyphen, period).",
+        )
+    if nm in base_spectra:
+        raise HTTPException(400, "Built-in catalog colors cannot be removed.")
+
+    removed = db_spectra.remove_approved_color(nm)
+    if removed <= 0:
+        raise HTTPException(404, "No approved database color found with that name.")
+
+    rebuild_spectrum_cache()
+    return {"ok": True, "message": f"Removed '{nm}' from approved database colors.", "deleted_rows": removed}
+
+
+@app.get("/api/admin/removable-colors")
+@_limiter.limit(RATE_LIMIT_ADMIN)
+async def admin_removable_colors(request: Request, authorization: Optional[str] = Header(default=None)):
+    if not db_spectra.database_url():
+        raise HTTPException(503, "DATABASE_URL is not set.")
+    _require_admin(authorization)
+    names = db_spectra.list_approved_color_names()
+    removable = [n for n in names if n not in base_spectra]
+    return {"colors": removable}
 
 
 @app.post("/api/optimize", response_model=OptimizeResponse)
