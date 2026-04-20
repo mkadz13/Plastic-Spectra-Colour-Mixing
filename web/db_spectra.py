@@ -137,6 +137,36 @@ def set_status(row_id: int, status: str) -> bool:
     return n > 0
 
 
+def remove_approved_color(color_name: str) -> int:
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                DELETE FROM spectrum_submissions
+                WHERE color_name = %s AND status = 'approved'
+                """,
+                (color_name,),
+            )
+            n = cur.rowcount
+        conn.commit()
+    return int(n)
+
+
+def list_approved_color_names() -> List[str]:
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT DISTINCT color_name
+                FROM spectrum_submissions
+                WHERE status = 'approved'
+                ORDER BY color_name ASC
+                """
+            )
+            rows = cur.fetchall()
+    return [str(r["color_name"]).strip() for r in rows if str(r["color_name"]).strip()]
+
+
 def admin_token_ok(provided: str) -> bool:
     expected = os.environ.get("ADMIN_SECRET", "").strip()
     if not expected:
